@@ -1,0 +1,31 @@
+[tool.poetry]
+name = "firm_match"
+version = "0.0.1"
+description = "Light weight package for matching firm names"
+authors = ["aeturrell"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+sparse-dot-topn = "^1.1.1"
+pandas = "^2.2.2"
+scikit-learn = "^1.5.0"
+loguru = "^0.7.2"
+
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.4.8"
+pre-commit = "^3.7.1"
+pre-commit-hooks = "^4.6.0"
+jupyter = "^1.0.0"
+nox = "^2024.4.15"
+pytest = "^8.2.2"
+mypy = "^1.10.0"
+typeguard = "^4.3.0"
+nbstripout = "^0.7.1"
+xdoctest = "^1.1.4"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
