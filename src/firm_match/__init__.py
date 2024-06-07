@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 from loguru import logger
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sparse_dot_topn import awesome_cossim_topn
+from sparse_dot_topn import sp_matmul_topn
 from typeguard import typechecked
 
 logger.add(
@@ -56,6 +56,19 @@ def clean_firm_names(firm_series: pd.Series) -> pd.Series:
 
     Returns:
         pd.Series: Pandas series with cleaned firm names in.
+
+    Examples
+    --------
+    >>> df = pd.DataFrame(
+        {
+            "firm_names": [
+                "   the   big & little company  __  LimiteD",
+            ]
+        }
+        )
+    >>> clean_series = clean_firm_names(df["firm_names"])
+    >>> clean_series.iloc[0]
+    'big and little company'
     """
     # Everything in lower case
     xf = firm_series.str.lower()
@@ -81,7 +94,7 @@ def clean_firm_names(firm_series: pd.Series) -> pd.Series:
 @typechecked
 def match_firm_names(
     prime: pd.DataFrame,
-    secon: pd.DataFrame = None,
+    secon: typing.Union[pd.DataFrame, None] = None,
     p_match_col: str = "prime_name",
     s_match_col: str = "secon_name",
 ) -> pd.DataFrame:
@@ -130,7 +143,7 @@ def match_firm_names(
 
     def clean_names(df: pd.DataFrame, col: str) -> pd.DataFrame:
         df.loc[:, col] = df[col].astype(str)
-        df.loc[:, col + "_cln"] = clean_firm_names(df, col)
+        df.loc[:, col + "_cln"] = clean_firm_names(df[col])
         df = df.drop_duplicates(subset=col + "_cln", keep="first")
         logger.info("Cleaning on " + col + f" complete; {len(df)} records")
         return df
@@ -176,8 +189,8 @@ def match_firm_names(
     tfidf_secon = vectorizer.transform(secon[s_match_col + "_cln"])
     num_matches = 2
     threshold = 0
-    mat_of_scores = awesome_cossim_topn(
-        tfidf_prime, tfidf_secon.T, num_matches, threshold, use_threads=True, n_jobs=4
+    mat_of_scores = sp_matmul_topn(
+        tfidf_prime, tfidf_secon, threshold=threshold, top_n=num_matches, n_threads=4
     )
     if not secon_flag:
         # If secon and prime are same datasets, fill diagonal with zero as this is

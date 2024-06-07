@@ -12,12 +12,41 @@ def test_self_matching_firm_data():
                 "the big firm limited",
                 "the little firm plc",
                 "a little firm",
+                "big ltd",
+            ]
+        }
+    )
+    matches_scores_answer = np.array([0.778495, 0.932603, 0.932603, 0.778495])
+    matches = match_firm_names(df, p_match_col="firm_names")
+    assert (
+        matches_scores_answer.round(2) == matches["match_score"].values.round(2)
+    ).all()
+
+
+def test_matching_from_two_lists_of_firm_data():
+    df = pd.DataFrame(
+        {
+            "firm_names": [
+                "the big firm limited",
+                "the little firm plc",
+                "a little firm",
                 "biggest firm",
             ]
         }
     )
-    matches_scores_answer = np.array([0.62759711, 0.9266666, 0.9266666, 0.62759711])
-    matches = match_firm_names(df, p_match_col="firm_names")
+    xf = pd.DataFrame(
+        {
+            "firm_names_secon": [
+                "a big firm plc",
+                "LitTTle company limited",
+                "Biggest Firm",
+            ]
+        }
+    )
+    matches = match_firm_names(
+        df, xf, p_match_col="firm_names", s_match_col="firm_names_secon"
+    )
+    matches_scores_answer = np.array([0.906213, 0.865682, 0.846631, 1.000000])
     assert (
         matches_scores_answer.round(2) == matches["match_score"].values.round(2)
     ).all()
