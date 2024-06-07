@@ -17,7 +17,7 @@ def test_self_matching_firm_data():
         }
     )
     matches_scores_answer = np.array([0.778495, 0.932603, 0.932603, 0.778495])
-    matches = match_firm_names(df, p_match_col="firm_names")
+    matches = match_firm_names(df["firm_names"])
     assert (
         matches_scores_answer.round(2) == matches["match_score"].values.round(2)
     ).all()
@@ -44,7 +44,7 @@ def test_matching_from_two_lists_of_firm_data():
         }
     )
     matches = match_firm_names(
-        df, xf, p_match_col="firm_names", s_match_col="firm_names_secon"
+        df["firm_names"], xf["firm_names_secon"]
     )
     matches_scores_answer = np.array([0.906213, 0.865682, 0.846631, 1.000000])
     assert (

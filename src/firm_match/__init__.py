@@ -209,3 +209,117 @@ def match_firm_names(
     )
     matches = matches.reset_index(drop=True).rename(columns={0: "match_score"})
     return matches
+
+
+
+
+@typechecked
+def match_firm_names(
+    prime: pd.Series,
+    secon: typing.Union[pd.Series, None] = None,
+) -> pd.DataFrame:
+    """Matching capability for firm names, for one dataframe (deduplication) or two dataframes (matching each entry in prime to its closest equivalent in secon).
+
+    This script provides an arbitrary matching capability. It is asymmetric in the
+    sense that one of the input datasets, prime, will be used to define the
+    vector space that is used to do the matching.
+    It takes in pandas dataframes, prime and secon, matches them, and returns
+    an output data frame.
+
+    Args:
+        prime (pd.Series): The primary firm name series. Used to create vector space.
+        secon (pd.Series, optional): The secondary firm name series (do not provide if deduplicating prime). Defaults to None.
+
+    Returns:
+        pd.DataFrame: A list of firms with match scores.
+
+    Examples
+    --------
+    >>> df = pd.DataFrame(
+        {
+            "firm_names": [
+                "the big firm limited",
+                "the little firm plc",
+                "a little firm",
+                "biggest firm",
+            ]
+        }
+        )
+    >>> xf = pd.DataFrame(
+        {
+            "firm_names_secon": [
+                "a big firm plc",
+                "LitTTle company limited",
+                "Biggest Firm",
+            ]
+        }
+        )
+    >>> matches = match_firm_names(
+        df["firm_names"], xf["firm_names_secon"]
+        )
+    """
+
+    def clean_names(firm_name_series: pd.Series, input_col_name: str, clean_col_name: str) -> pd.DataFrame:
+        firm_name_series = firm_name_series.astype("string")
+        clean_firm_name_series = clean_firm_names(firm_name_series)
+        df = pd.concat([firm_name_series, clean_firm_name_series], axis=1)
+        df.columns = [input_col_name, clean_col_name]
+        df = df.drop_duplicates(subset=clean_col_name, keep="first")
+        logger.info(f"Cleaning on {len(df)} input firm names complete")
+        return df
+
+    input_col_name = "firm_names"
+    clean_col_name = "firm_names_clean"
+    prefix_for_secon = "secon_"  # Simply to avoid dataframes with repeated col names
+    prime_df = clean_names(prime,input_col_name, clean_col_name)
+    secon_flag = True
+    if secon is None:
+        secon_df = prime_df
+        secon_flag = False
+        
+        secon_df = secon_df.rename(
+            columns=dict(
+                zip([x for x in secon_df.columns], [prefix_for_secon + x for x in secon_df.columns])
+            )
+        )
+    else:
+        secon_df = clean_names(secon, prefix_for_secon + input_col_name, prefix_for_secon + clean_col_name)
+        secon_df[prefix_for_secon + clean_col_name] = secon_df[prefix_for_secon + clean_col_name].astype("string")
+        secon_df = secon_df.dropna(subset=[prefix_for_secon + clean_col_name])
+
+    # Prep for matching non-exacts
+    prime_df[clean_col_name] = prime_df[clean_col_name].astype("string")
+    prime_df = prime_df.dropna(subset=[clean_col_name])
+
+    # ----------------------
+    # Matching
+    # ----------------------
+    # Method - use char level n-grams
+    vectorizer = TfidfVectorizer(
+        analyzer="char_wb", ngram_range=(1, 4), max_features=30000, encoding="utf-8"
+    )
+    # Create the tf-idf terms based on characters using the prime
+    tfidf_prime = vectorizer.fit_transform(prime_df[clean_col_name])
+    tfidf_secon = vectorizer.transform(secon_df[prefix_for_secon + clean_col_name])
+    num_matches = 2
+    threshold = 0
+    mat_of_scores = sp_matmul_topn(
+        tfidf_prime, tfidf_secon, threshold=threshold, top_n=num_matches, n_threads=4
+    )
+    if not secon_flag:
+        # If secon and prime are same datasets, fill diagonal with zero as this is
+        # the trivial match
+        mat_of_scores.setdiag(0)
+    max_indexes = np.squeeze(np.asarray(np.argmax(mat_of_scores, 1)))
+    top_scores = np.max(mat_of_scores, 1)  # vector of size secon entries
+    matches = pd.concat(
+        [
+            prime_df.reset_index(drop=True),
+            secon_df.iloc[max_indexes].reset_index(drop=True),
+            pd.DataFrame(top_scores.toarray()),
+        ],
+        axis=1,
+        join="inner",
+    )
+    matches = matches.reset_index(drop=True).rename(columns={0: "match_score"})
+    return matches
