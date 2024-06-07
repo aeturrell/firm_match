@@ -43,9 +43,7 @@ def test_matching_from_two_lists_of_firm_data():
             ]
         }
     )
-    matches = match_firm_names(
-        df["firm_names"], xf["firm_names_secon"]
-    )
+    matches = match_firm_names(df["firm_names"], xf["firm_names_secon"])
     matches_scores_answer = np.array([0.906213, 0.865682, 0.846631, 1.000000])
     assert (
         matches_scores_answer.round(2) == matches["match_score"].values.round(2)

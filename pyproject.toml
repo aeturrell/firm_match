@@ -7,11 +7,14 @@ license = "MIT"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = ">=3.9,<4.0.0"
 sparse-dot-topn = "^1.1.1"
 pandas = "^2.2.2"
 scikit-learn = "^1.5.0"
 loguru = "^0.7.2"
+pandas-stubs = "^2.2.2.240603"
+typeguard = "^4.3.0"
+types-setuptools = "^70.0.0.20240524"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -22,10 +25,28 @@ jupyter = "^1.0.0"
 nox = "^2024.4.15"
 pytest = "^8.2.2"
 mypy = "^1.10.0"
-typeguard = "^4.3.0"
 nbstripout = "^0.7.1"
 xdoctest = "^1.1.4"
+nox-poetry = "^1.0.3"
+coverage = "^7.5.3"
+
+[tool.poetry.scripts]
+firm_match = "firm_match.__main__:main"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.mypy]
+ignore_missing_imports = true
+
+[tool.coverage.paths]
+source = ["src", "*/site-packages"]
+
+[tool.coverage.run]
+branch = true
+source = ["firm_match"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 96
